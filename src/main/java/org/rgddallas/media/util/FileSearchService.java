@@ -1,10 +1,16 @@
 package org.rgddallas.media.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FileSearch {
+@Service
+public class FileSearchService {
+    private static Logger log = LoggerFactory.getLogger(FileSearchService.class);
 
     private String fileNameToSearch;
     private List<String> result = new ArrayList<String>();
@@ -21,12 +27,12 @@ public class FileSearch {
         return result;
     }
 
-    public static void main(String[] args) {
+  /*  public static void main(String[] args) {
 
         FileSearch fileSearch = new FileSearch();
 
         //try different directory and filename :)
-        fileSearch.searchDirectory(new File("/Users/mkyong/websites"), "post.php");
+        fileSearch.searchDirectory(new File("C:\\temp\\"), "aaja_piya.mp3");
 
         int count = fileSearch.getResult().size();
         if(count ==0){
@@ -37,24 +43,30 @@ public class FileSearch {
                 System.out.println("Found : " + matched);
             }
         }
-    }
+    }*/
 
-    public void searchDirectory(File directory, String fileNameToSearch) {
-
+    /**
+     * Finds a matching file in the specified directory and its sub-directories.
+     *
+     * @param directory        directory to search
+     * @param fileNameToSearch file name to search, including extension
+     */
+    public List<String> searchDirectory(File directory, String fileNameToSearch) {
         setFileNameToSearch(fileNameToSearch);
 
         if (directory.isDirectory()) {
             search(directory);
         } else {
-            System.out.println(directory.getAbsoluteFile() + " is not a directory!");
+            log.debug("{} is not a directory!", directory.getAbsoluteFile());
         }
 
+        return result;
     }
 
     private void search(File file) {
 
         if (file.isDirectory()) {
-            System.out.println("Searching directory ... " + file.getAbsoluteFile());
+            log.debug("Searching directory ... {}", file.getAbsoluteFile());
 
             //do you have permission to read this directory?
             if (file.canRead()) {
@@ -65,15 +77,11 @@ public class FileSearch {
                         if (getFileNameToSearch().equals(temp.getName().toLowerCase())) {
                             result.add(temp.getAbsoluteFile().toString());
                         }
-
                     }
                 }
-
             } else {
-                System.out.println(file.getAbsoluteFile() + "Permission Denied");
+                log.debug("{} - Permission Denied.", file.getAbsoluteFile());
             }
         }
-
     }
-
 }
