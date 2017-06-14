@@ -74,7 +74,7 @@ public class FileSearchService {
                     if (temp.isDirectory()) {
                         search(temp);
                     } else {
-                        if (getFileNameToSearch().equals(temp.getName().toLowerCase())) {
+                        if (getFileNameToSearch().toLowerCase().equals(temp.getName().toLowerCase())) {
                             result.add(temp.getAbsoluteFile().toString());
                         }
                     }

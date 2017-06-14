@@ -30,7 +30,7 @@ public class MediaResource {
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
     //public static final String VIDEO_LOCATION = "/volume1/video/01\\ Pravachans/RGD-EditedAll/";
-    public static final String VIDEO_LOCATION = "/volume1/video/01\\ Pravachans/RGD-EditedAll/";
+    public static final String VIDEO_LOCATION = "C:\\Users\\Neelabh\\Videos\\";
     //public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     public static final String AUDIO_LOCATION = "C:\\temp\\";
 
@@ -107,7 +107,9 @@ public class MediaResource {
         InputStream inputStream = null;
 
         String fileToSearch = fileName + fileExtension;
-        List<String> filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileName);
+        log.debug("file to search {}", fileToSearch);
+        List<String> filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch);
+        log.debug("files found : {}", filesFound);
 
         filesFound.forEach(file -> log.debug("List of files found {}", file));
 
