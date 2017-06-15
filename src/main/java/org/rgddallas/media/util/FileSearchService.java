@@ -51,11 +51,15 @@ public class FileSearchService {
      * @param directory        directory to search
      * @param fileNameToSearch file name to search, including extension
      */
-    public List<String> searchDirectory(File directory, String fileNameToSearch) {
+    public List<String> searchDirectory(File directory, String fileNameToSearch, boolean regex) {
         setFileNameToSearch(fileNameToSearch);
 
         if (directory.isDirectory()) {
-            search(directory);
+            if (regex) {
+                wildCardSearch(directory);
+            } else {
+                search(directory);
+            }
         } else {
             log.debug("{} is not a directory!", directory.getAbsoluteFile());
         }
@@ -63,8 +67,38 @@ public class FileSearchService {
         return result;
     }
 
+    /**
+     * Plain text search.
+     *
+     * @param file
+     */
     private void search(File file) {
+        if (file.isDirectory()) {
+            log.debug("Searching directory ... {}", file.getAbsoluteFile());
 
+            //do you have permission to read this directory?
+            if (file.canRead()) {
+                for (File temp : file.listFiles()) {
+                    if (temp.isDirectory()) {
+                        search(temp);
+                    } else {
+                        if (getFileNameToSearch().matches(temp.getName())) {
+                            result.add(temp.getAbsoluteFile().toString());
+                        }
+                    }
+                }
+            } else {
+                log.debug("{} - Permission Denied.", file.getAbsoluteFile());
+            }
+        }
+    }
+
+    /**
+     * Wildcard search.
+     *
+     * @param file
+     */
+    private void wildCardSearch(File file) {
         if (file.isDirectory()) {
             log.debug("Searching directory ... {}", file.getAbsoluteFile());
 

@@ -1,6 +1,9 @@
 package org.rgddallas.media.web.rest;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.rgddallas.media.entity.VideoPlayback;
+import org.rgddallas.media.entity.VideoPlaybackRepository;
 import org.rgddallas.media.util.FileSearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +37,15 @@ public class MediaResource {
     //public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     public static final String AUDIO_LOCATION = "C:\\temp\\";
 
+    private VideoPlaybackRepository videoPlaybackRepo;
+
 
     private FileSearchService fileSearchService;
 
     @Autowired
-    public MediaResource(FileSearchService fileSearchService) {
+    public MediaResource(FileSearchService fileSearchService, VideoPlaybackRepository videoPlaybackRepo) {
         this.fileSearchService = fileSearchService;
+        this.videoPlaybackRepo = videoPlaybackRepo;
     }
     /**
      * Gets the video file content from the server.
@@ -65,6 +71,46 @@ public class MediaResource {
         log.info("Got Audio file request for file {}", fileName);
 
         return getMediaAsStream(AUDIO_LOCATION, fileName, MP3_EXTN);
+    }
+
+    /**
+     *
+     * @return
+     */
+    @GetMapping(value = "/video", produces = "video/mp4")
+    public ResponseEntity<byte[]> getVideo() {
+        log.info("Got video file request for today's lecture");
+
+        List<VideoPlayback> videoSeqList = (List<VideoPlayback>) videoPlaybackRepo.findAll();
+
+        VideoPlayback videoPlayback = null;
+        if (!CollectionUtils.isEmpty(videoSeqList)) {
+            videoPlayback = videoSeqList.get(0);
+        }
+
+        String queryStr = null;
+        if (videoPlayback != null) {
+            queryStr = Long.toString(videoPlayback.getFileSequence());
+
+            //prepare the regex for matching
+            if (StringUtils.isNotEmpty(queryStr)) {
+                queryStr = "0*".concat(queryStr).concat("*");
+                queryStr= queryStr.replaceAll("\\*", "\\\\w*");
+            }
+        }
+
+        log.debug("File pattern to search : {}", queryStr);
+
+        ResponseEntity<byte[]> response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
+        if (response != null) {
+            Long nextSeq = videoPlayback.getFileSequence() + 1L;
+            videoPlayback.setFileSequence(nextSeq);
+
+            videoPlaybackRepo.save(videoPlayback);
+            log.debug("Incremented Seqeuence number and saved : {}", videoPlayback.getFileSequence());
+        }
+
+        return response;
     }
 
     /**
@@ -108,7 +154,16 @@ public class MediaResource {
 
         String fileToSearch = fileName + fileExtension;
         log.debug("file to search {}", fileToSearch);
-        List<String> filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch);
+        List<String> filesFound = null;
+
+        if (fileExtension == MP4_EXTN) {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, true);
+
+        } else {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, false);
+
+        }
+
         log.debug("files found : {}", filesFound);
 
         filesFound.forEach(file -> log.debug("List of files found {}", file));
