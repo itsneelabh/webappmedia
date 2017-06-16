@@ -82,7 +82,7 @@ public class FileSearchService {
                     if (temp.isDirectory()) {
                         search(temp);
                     } else {
-                        if (getFileNameToSearch().matches(temp.getName())) {
+                        if (getFileNameToSearch().toLowerCase().equals(temp.getName().toLowerCase())) {
                             result.add(temp.getAbsoluteFile().toString());
                         }
                     }
@@ -106,9 +106,10 @@ public class FileSearchService {
             if (file.canRead()) {
                 for (File temp : file.listFiles()) {
                     if (temp.isDirectory()) {
-                        search(temp);
+                        wildCardSearch(temp);
                     } else {
-                        if (getFileNameToSearch().toLowerCase().equals(temp.getName().toLowerCase())) {
+                        log.debug("file name to match : {}", temp.getName());
+                        if (temp.getName().matches(getFileNameToSearch())) {
                             result.add(temp.getAbsoluteFile().toString());
                         }
                     }

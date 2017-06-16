@@ -95,7 +95,7 @@ public class MediaResource {
             //prepare the regex for matching
             if (StringUtils.isNotEmpty(queryStr)) {
                 queryStr = "0*".concat(queryStr).concat("*");
-                queryStr= queryStr.replaceAll("\\*", "\\\\w*");
+                queryStr = queryStr.replace("*", ".*?");
             }
         }
 
@@ -103,10 +103,12 @@ public class MediaResource {
 
         ResponseEntity<byte[]> response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
         if (response != null) {
+            log.debug("Sequence after playing video : {}", videoPlayback.getFileSequence());
+
             Long nextSeq = videoPlayback.getFileSequence() + 1L;
             videoPlayback.setFileSequence(nextSeq);
 
-            videoPlaybackRepo.save(videoPlayback);
+            videoPlayback = videoPlaybackRepo.save(videoPlayback);
             log.debug("Incremented Seqeuence number and saved : {}", videoPlayback.getFileSequence());
         }
 
