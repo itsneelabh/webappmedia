@@ -11,12 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -27,6 +25,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin
 public class MediaResource {
     public static final Logger log = LoggerFactory.getLogger(MediaResource.class);
 
@@ -81,6 +80,8 @@ public class MediaResource {
     public ResponseEntity<byte[]> getVideo() {
         log.info("Got video file request for today's lecture");
 
+        Long sequenceToUse = 1L;
+
         List<VideoPlayback> videoSeqList = (List<VideoPlayback>) videoPlaybackRepo.findAll();
 
         VideoPlayback videoPlayback = null;
@@ -88,14 +89,20 @@ public class MediaResource {
             videoPlayback = videoSeqList.get(0);
         }
 
-        String queryStr = null;
+        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusHours(23))) {
+            sequenceToUse = videoPlayback.getFileSequence();
+        } else {
+            sequenceToUse = videoPlayback.getFileSequence() - 1;
+        }
+
+        String queryStr = "[0]*<seq>[a-zA-Z_-].*";
         if (videoPlayback != null) {
-            queryStr = Long.toString(videoPlayback.getFileSequence());
+            String seq = Long.toString(sequenceToUse);
 
             //prepare the regex for matching
-            if (StringUtils.isNotEmpty(queryStr)) {
-                queryStr = "0*".concat(queryStr).concat("*");
-                queryStr = queryStr.replace("*", ".*?");
+            if (StringUtils.isNotEmpty(seq)) {
+                queryStr = queryStr.replace("<seq>", seq);
+                log.debug("Regex to match is : {}", queryStr);
             }
         }
 
@@ -105,11 +112,12 @@ public class MediaResource {
         if (response != null) {
             log.debug("Sequence after playing video : {}", videoPlayback.getFileSequence());
 
-            Long nextSeq = videoPlayback.getFileSequence() + 1L;
+            Long nextSeq = sequenceToUse + 1L;
             videoPlayback.setFileSequence(nextSeq);
+            videoPlayback.setLastPlayed(LocalDateTime.now());
 
             videoPlayback = videoPlaybackRepo.save(videoPlayback);
-            log.debug("Incremented Seqeuence number and saved : {}", videoPlayback.getFileSequence());
+            log.debug("Incremented Sequence number and saved : {}", videoPlayback.getFileSequence());
         }
 
         return response;

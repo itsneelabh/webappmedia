@@ -13,7 +13,7 @@ public class FileSearchService {
     private static Logger log = LoggerFactory.getLogger(FileSearchService.class);
 
     private String fileNameToSearch;
-    private List<String> result = new ArrayList<String>();
+    private List<String> result;
 
     public String getFileNameToSearch() {
         return fileNameToSearch;
@@ -52,8 +52,9 @@ public class FileSearchService {
      * @param fileNameToSearch file name to search, including extension
      */
     public List<String> searchDirectory(File directory, String fileNameToSearch, boolean regex) {
-        setFileNameToSearch(fileNameToSearch);
+        result = new ArrayList<String>();
 
+        setFileNameToSearch(fileNameToSearch);
         if (directory.isDirectory()) {
             if (regex) {
                 wildCardSearch(directory);
@@ -108,8 +109,8 @@ public class FileSearchService {
                     if (temp.isDirectory()) {
                         wildCardSearch(temp);
                     } else {
-                        log.debug("file name to match : {}", temp.getName());
                         if (temp.getName().matches(getFileNameToSearch())) {
+                            log.debug("file name matched : {}", temp.getName());
                             result.add(temp.getAbsoluteFile().toString());
                         }
                     }

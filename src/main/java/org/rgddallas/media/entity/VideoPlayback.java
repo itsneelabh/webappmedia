@@ -5,6 +5,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Created by Neelabh on 6/14/2017.
@@ -17,6 +18,8 @@ public class VideoPlayback {
     private Long id;
 
     private Long fileSequence;
+
+    private LocalDateTime lastPlayed;
 
     public Long getFileSequence() {
         return fileSequence;
@@ -32,6 +35,14 @@ public class VideoPlayback {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public LocalDateTime getLastPlayed() {
+        return lastPlayed;
+    }
+
+    public void setLastPlayed(LocalDateTime lastPlayed) {
+        this.lastPlayed = lastPlayed;
     }
 
     @Override
