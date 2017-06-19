@@ -31,10 +31,10 @@ public class MediaResource {
 
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
-    //public static final String VIDEO_LOCATION = "/volume1/video/01\\ Pravachans/RGD-EditedAll/";
-    public static final String VIDEO_LOCATION = "C:\\Users\\Neelabh\\Videos\\";
-    //public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
-    public static final String AUDIO_LOCATION = "C:\\temp\\";
+    public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    //public static final String VIDEO_LOCATION = "C:\\Users\\Neelabh\\Videos\\";
+    public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
+    //public static final String AUDIO_LOCATION = "C:\\temp\\";
 
     private VideoPlaybackRepository videoPlaybackRepo;
 
@@ -49,7 +49,7 @@ public class MediaResource {
     /**
      * Gets the video file content from the server.
      *
-     * @param fileName
+     * @param fileName name of the file without extension and spaces
      * @return video content as a byte stream
      */
     @GetMapping(value = "/video/{fileName}", produces = "video/mp4")
@@ -62,7 +62,7 @@ public class MediaResource {
     /**
      * Gets the audio file content from the server.
      *
-     * @param fileName
+     * @param fileName file to return, with no spaces
      * @return audio content as a byte stream
      */
     @GetMapping(value = "/audio/{fileName}", produces = "audio/mpeg")
@@ -73,15 +73,17 @@ public class MediaResource {
     }
 
     /**
+     * REST controller to return the content of the video file to be played. This is based on the current sequence
+     * number stored in the DB. This number gets updated once in 23 hours. If the request is received within 23 hours
+     * then same file is returned and the sequence remains unchanged.
      *
-     * @return
+     * @return video file as byte stream
      */
     @GetMapping(value = "/video", produces = "video/mp4")
     public ResponseEntity<byte[]> getVideo() {
         log.info("Got video file request for today's lecture");
 
         Long sequenceToUse = 1L;
-
         List<VideoPlayback> videoSeqList = (List<VideoPlayback>) videoPlaybackRepo.findAll();
 
         VideoPlayback videoPlayback = null;
@@ -95,7 +97,8 @@ public class MediaResource {
             sequenceToUse = videoPlayback.getFileSequence() - 1;
         }
 
-        String queryStr = "[0]*<seq>[a-zA-Z_-].*";
+        //String queryStr = "[0]*<seq>[a-zA-Z_-].*";
+        String queryStr = "[0]*<seq>_.*";
         if (videoPlayback != null) {
             String seq = Long.toString(sequenceToUse);
 
@@ -109,19 +112,49 @@ public class MediaResource {
         log.debug("File pattern to search : {}", queryStr);
 
         ResponseEntity<byte[]> response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
-        if (response != null) {
-            log.debug("Sequence after playing video : {}", videoPlayback.getFileSequence());
+        log.debug("Response status code : {}", response.getStatusCode());
 
-            Long nextSeq = sequenceToUse + 1L;
-            videoPlayback.setFileSequence(nextSeq);
-            videoPlayback.setLastPlayed(LocalDateTime.now());
+        if (response.getStatusCode().equals(HttpStatus.OK)) {
+            updateSequence(videoPlayback, sequenceToUse + 1L);
+        } else {//reset the sequence to 1 to start playing from the first video
+            log.info("File not found for sequence {}, defaulting to Sequence number 1", sequenceToUse);
 
-            videoPlayback = videoPlaybackRepo.save(videoPlayback);
-            log.debug("Incremented Sequence number and saved : {}", videoPlayback.getFileSequence());
+            queryStr = "[0]*<seq>_.*";
+            queryStr = queryStr.replace("<seq>", "1");
+
+            log.debug("Regex to match is : {}", queryStr);
+            response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
+
+            if (response.getStatusCode().equals(HttpStatus.OK)) {
+                updateSequence(videoPlayback, 2L);
+            }
         }
 
         return response;
     }
+
+    /**
+     * Increments the current sequence and save into the DB.
+     *
+     * @param videoPlayback the video playback entity
+     * @param sequenceToSet optional sequence to set
+     * @return the updated sequence
+     */
+    public Long updateSequence(VideoPlayback videoPlayback, Long sequenceToSet) {
+        if (sequenceToSet == null) {
+            sequenceToSet = videoPlayback.getFileSequence() + 1L;
+        }
+
+        videoPlayback.setFileSequence(sequenceToSet);
+        videoPlayback.setLastPlayed(LocalDateTime.now());
+
+        videoPlayback = videoPlaybackRepo.save(videoPlayback);
+
+        log.debug("Incremented Sequence number and saved : {}", videoPlayback.getFileSequence());
+
+        return videoPlayback.getFileSequence();
+    }
+
 
     /**
      * Utility method to get the media content from file system and prepare a response entity.
@@ -135,7 +168,12 @@ public class MediaResource {
         ResponseEntity<byte[]> response;
 
         try {
-            response = new ResponseEntity<byte[]>(getFileStreamAsByteArray(location, fileName, fileExtension), HttpStatus.OK);
+            byte[] byteStream = getFileStreamAsByteArray(location, fileName, fileExtension);
+            if (byteStream != null) {
+                response = new ResponseEntity<byte[]>(byteStream, HttpStatus.OK);
+            } else {
+                throw new FileNotFoundException();
+            }
         } catch (FileNotFoundException e) {
             log.error("No file found ", e);
             response = new ResponseEntity("File Not Found", HttpStatus.BAD_REQUEST);
@@ -182,7 +220,9 @@ public class MediaResource {
             inputStream = new FileInputStream(filesFound.get(0));
         }
 
-        bytes = IOUtils.toByteArray(inputStream);
+        if (inputStream != null) {
+            bytes = IOUtils.toByteArray(inputStream);
+        }
 
         return bytes;
     }
