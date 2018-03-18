@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * This class contains resources the serves the media content - audio and video as REST controllers.
- *
+ * <p>
  * Created by Neelabh on 3/12/2017.
  */
 
@@ -38,14 +38,11 @@ public class MediaResource {
 
     private VideoPlaybackRepository videoPlaybackRepo;
 
-
-    private FileSearchService fileSearchService;
-
     @Autowired
-    public MediaResource(FileSearchService fileSearchService, VideoPlaybackRepository videoPlaybackRepo) {
-        this.fileSearchService = fileSearchService;
+    public MediaResource(VideoPlaybackRepository videoPlaybackRepo) {
         this.videoPlaybackRepo = videoPlaybackRepo;
     }
+
     /**
      * Gets the video file content from the server.
      *
@@ -159,8 +156,8 @@ public class MediaResource {
     /**
      * Utility method to get the media content from file system and prepare a response entity.
      *
-     * @param location directory to search into
-     * @param fileName file name
+     * @param location      directory to search into
+     * @param fileName      file name
      * @param fileExtension file extension - mp3 or mp4
      * @return the response entity with file content, if found
      */
@@ -186,7 +183,6 @@ public class MediaResource {
     }
 
     /**
-     *
      * Utility method.
      *
      * @param fileLocation
@@ -197,6 +193,7 @@ public class MediaResource {
      */
     public byte[] getFileStreamAsByteArray(String fileLocation, String fileName, String fileExtension) throws IOException {
         byte[] bytes = null;
+        FileSearchService fileSearchService = new FileSearchService();
 
         InputStream inputStream = null;
 
