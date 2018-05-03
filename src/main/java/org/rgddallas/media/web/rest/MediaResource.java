@@ -8,11 +8,14 @@ import org.rgddallas.media.util.FileSearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,7 +35,7 @@ public class MediaResource {
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
     public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
-    //public static final String VIDEO_LOCATION = "C:\\Users\\Neelabh\\Videos\\";
+    //public static final String VIDEO_LOCATION = "C:\\temp\\";
     public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     //public static final String AUDIO_LOCATION = "C:\\temp\\";
 
@@ -49,8 +52,8 @@ public class MediaResource {
      * @param fileName name of the file without extension and spaces
      * @return video content as a byte stream
      */
-    @GetMapping(value = "/video/{fileName}", produces = "video/mp4")
-    public ResponseEntity<byte[]> getVideo(@PathVariable String fileName) {
+    @GetMapping(value = "/video/{fileName}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<byte[]> getVideo(@PathVariable String fileName, HttpServletResponse response) {
         log.info("Got video file request for file {}", fileName);
 
         return getMediaAsStream(VIDEO_LOCATION, fileName, MP4_EXTN);
@@ -128,6 +131,44 @@ public class MediaResource {
         }
 
         return response;
+    }
+
+    @GetMapping(value = "/video2", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public void getTodaysVideoToPlay(OutputStream output) throws IOException {
+
+        Long sequenceToUse = 1L;
+        List<VideoPlayback> videoSeqList = (List<VideoPlayback>) videoPlaybackRepo.findAll();
+
+        VideoPlayback videoPlayback = null;
+        if (!CollectionUtils.isEmpty(videoSeqList)) {
+            videoPlayback = videoSeqList.get(0);
+        }
+
+        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusHours(23))) {
+            sequenceToUse = videoPlayback.getFileSequence();
+        } else {
+            sequenceToUse = videoPlayback.getFileSequence() - 1;
+        }
+
+        //String queryStr = "[0]*<seq>[a-zA-Z_-].*";
+        String queryStr = "[0]*<seq>_.*";
+        if (videoPlayback != null) {
+            String seq = Long.toString(sequenceToUse);
+
+            //prepare the regex for matching
+            if (StringUtils.isNotEmpty(seq)) {
+                queryStr = queryStr.replace("<seq>", seq);
+                log.debug("Regex to match is : {}", queryStr);
+            }
+        }
+
+        log.debug("File pattern to search : {}", queryStr);
+
+        File file = new File(getFileAsInputStream(VIDEO_LOCATION, queryStr, MP4_EXTN));
+        InputStream inputStream = new FileInputStream(file);
+        InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
+
+        IOUtils.copy(inputStream, output);
     }
 
     /**
@@ -222,5 +263,42 @@ public class MediaResource {
         }
 
         return bytes;
+    }
+
+    /**
+     * @param fileLocation
+     * @param fileName
+     * @param fileExtension
+     * @return
+     * @throws IOException
+     */
+    public String getFileAsInputStream(String fileLocation, String fileName, String fileExtension) throws IOException {
+        byte[] bytes = null;
+        FileSearchService fileSearchService = new FileSearchService();
+
+        String fileFound = "";
+
+        String fileToSearch = fileName + fileExtension;
+        log.debug("file to search {}", fileToSearch);
+        List<String> filesFound = null;
+
+        if (fileExtension == MP4_EXTN) {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, true);
+
+        } else {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, false);
+
+        }
+
+        log.debug("files found : {}", filesFound);
+
+        filesFound.forEach(file -> log.debug("List of files found {}", file));
+
+        if (!CollectionUtils.isEmpty(filesFound)) {
+            fileFound = filesFound.get(0);
+
+        }
+
+        return fileFound;
     }
 }
