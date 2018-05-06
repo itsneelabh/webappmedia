@@ -34,8 +34,8 @@ public class MediaResource {
 
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
-    public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
-    //public static final String VIDEO_LOCATION = "C:\\temp\\";
+    //public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    public static final String VIDEO_LOCATION = "C:\\temp\\";
     public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     //public static final String AUDIO_LOCATION = "C:\\temp\\";
 
@@ -164,7 +164,19 @@ public class MediaResource {
 
         log.debug("File pattern to search : {}", queryStr);
 
+
         File file = new File(getFileAsInputStream(VIDEO_LOCATION, queryStr, MP4_EXTN));
+
+        if (file != null) {
+            updateSequence(videoPlayback, sequenceToUse + 1L);
+        } else {//reset the sequence to 1 to start playing from the first video
+            log.info("File not found for sequence {}, defaulting to Sequence number 1", sequenceToUse);
+
+            queryStr = "[0]*<seq>_.*";
+            queryStr = queryStr.replace("<seq>", "1");
+            file = new File(getFileAsInputStream(VIDEO_LOCATION, queryStr, MP4_EXTN));
+        }
+
         InputStream inputStream = new FileInputStream(file);
         InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
 
