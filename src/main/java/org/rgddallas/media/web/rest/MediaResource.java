@@ -34,8 +34,8 @@ public class MediaResource {
 
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
-    //public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
-    public static final String VIDEO_LOCATION = "C:\\temp\\";
+    public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    //public static final String VIDEO_LOCATION = "C:\\temp\\";
     public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     //public static final String AUDIO_LOCATION = "C:\\temp\\";
 
@@ -144,7 +144,7 @@ public class MediaResource {
             videoPlayback = videoSeqList.get(0);
         }
 
-        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusHours(23))) {
+        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusDays(1))) {
             sequenceToUse = videoPlayback.getFileSequence();
         } else {
             sequenceToUse = videoPlayback.getFileSequence() - 1;
@@ -167,7 +167,7 @@ public class MediaResource {
 
         File file = new File(getFileAsInputStream(VIDEO_LOCATION, queryStr, MP4_EXTN));
 
-        if (file != null) {
+        if (file.canRead()) {
             updateSequence(videoPlayback, sequenceToUse + 1L);
         } else {//reset the sequence to 1 to start playing from the first video
             log.info("File not found for sequence {}, defaulting to Sequence number 1", sequenceToUse);
