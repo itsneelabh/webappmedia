@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 /**
  * This class contains resources the serves the media content - audio and video as REST controllers.
@@ -34,7 +35,10 @@ public class MediaResource {
 
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
+    public static final String KIRTAN = ".mov";
     public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    public static final String VIDEO_KIRTAN_LOCATION = "/volume1/video/Intranet/video_kirtan/";
+    //public static final String VIDEO_KIRTAN_LOCATION = "\\\\192.168.1.144\\video\\Intranet\\video_kirtan\\";
     //public static final String VIDEO_LOCATION = "C:\\temp\\";
     public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     //public static final String AUDIO_LOCATION = "C:\\temp\\";
@@ -44,19 +48,6 @@ public class MediaResource {
     @Autowired
     public MediaResource(VideoPlaybackRepository videoPlaybackRepo) {
         this.videoPlaybackRepo = videoPlaybackRepo;
-    }
-
-    /**
-     * Gets the video file content from the server.
-     *
-     * @param fileName name of the file without extension and spaces
-     * @return video content as a byte stream
-     */
-    @GetMapping(value = "/video/{fileName}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<byte[]> getVideo(@PathVariable String fileName, HttpServletResponse response) {
-        log.info("Got video file request for file {}", fileName);
-
-        return getMediaAsStream(VIDEO_LOCATION, fileName, MP4_EXTN);
     }
 
     /**
@@ -74,65 +65,10 @@ public class MediaResource {
 
     /**
      * REST controller to return the content of the video file to be played. This is based on the current sequence
-     * number stored in the DB. This number gets updated once in 23 hours. If the request is received within 23 hours
+     * number stored in the DB. This number gets updated once in a day. If the request is received on same day
      * then same file is returned and the sequence remains unchanged.
      *
-     * @return video file as byte stream
      */
-    @GetMapping(value = "/video", produces = "video/mp4")
-    public ResponseEntity<byte[]> getVideo() {
-        log.info("Got video file request for today's lecture");
-
-        Long sequenceToUse = 1L;
-        List<VideoPlayback> videoSeqList = (List<VideoPlayback>) videoPlaybackRepo.findAll();
-
-        VideoPlayback videoPlayback = null;
-        if (!CollectionUtils.isEmpty(videoSeqList)) {
-            videoPlayback = videoSeqList.get(0);
-        }
-
-        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusHours(23))) {
-            sequenceToUse = videoPlayback.getFileSequence();
-        } else {
-            sequenceToUse = videoPlayback.getFileSequence() - 1;
-        }
-
-        //String queryStr = "[0]*<seq>[a-zA-Z_-].*";
-        String queryStr = "[0]*<seq>_.*";
-        if (videoPlayback != null) {
-            String seq = Long.toString(sequenceToUse);
-
-            //prepare the regex for matching
-            if (StringUtils.isNotEmpty(seq)) {
-                queryStr = queryStr.replace("<seq>", seq);
-                log.debug("Regex to match is : {}", queryStr);
-            }
-        }
-
-        log.debug("File pattern to search : {}", queryStr);
-
-        ResponseEntity<byte[]> response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
-        log.debug("Response status code : {}", response.getStatusCode());
-
-        if (response.getStatusCode().equals(HttpStatus.OK)) {
-            updateSequence(videoPlayback, sequenceToUse + 1L);
-        } else {//reset the sequence to 1 to start playing from the first video
-            log.info("File not found for sequence {}, defaulting to Sequence number 1", sequenceToUse);
-
-            queryStr = "[0]*<seq>_.*";
-            queryStr = queryStr.replace("<seq>", "1");
-
-            log.debug("Regex to match is : {}", queryStr);
-            response = getMediaAsStream(VIDEO_LOCATION, queryStr, MP4_EXTN);
-
-            if (response.getStatusCode().equals(HttpStatus.OK)) {
-                updateSequence(videoPlayback, 2L);
-            }
-        }
-
-        return response;
-    }
-
     @GetMapping(value = "/video2", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public void getTodaysVideoToPlay(OutputStream output) throws IOException {
 
@@ -178,7 +114,33 @@ public class MediaResource {
         }
 
         InputStream inputStream = new FileInputStream(file);
-        InputStreamResource inputStreamResource = new InputStreamResource(inputStream);
+
+        IOUtils.copy(inputStream, output);
+    }
+
+    /**
+     *
+     * @param output
+     * @throws IOException
+     */
+    @GetMapping(value = "/video-kirtan", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public void getVideoToPlay(OutputStream output) throws IOException {
+
+        String pathToFetch = VIDEO_KIRTAN_LOCATION;
+
+        File folder = new File(pathToFetch);
+        File[] files = folder.listFiles();
+
+        int totalFiles = files.length;
+        log.info("Total files inside the folder - {}", totalFiles);
+
+        Random random = new Random();
+        int index = random.nextInt(totalFiles);
+        log.info("File - {}", index);
+
+        InputStream inputStream = new FileInputStream(files[index]);
+
+        log.info("Got file input stream");
 
         IOUtils.copy(inputStream, output);
     }
@@ -297,9 +259,12 @@ public class MediaResource {
         if (fileExtension == MP4_EXTN) {
             filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, true);
 
-        } else {
-            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, false);
+        } else if (fileExtension == KIRTAN) {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileLocation, true);
+        }
 
+        else {
+            filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, false);
         }
 
         log.debug("files found : {}", filesFound);

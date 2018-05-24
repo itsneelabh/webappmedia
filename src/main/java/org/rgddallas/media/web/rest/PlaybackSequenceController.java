@@ -160,4 +160,13 @@ public class PlaybackSequenceController {
 
         return Long.toString(result);
     }
+
+    /**
+     *
+     * @return
+     */
+    @GetMapping("/records")
+    public List<VideoPlayback> getVideoPlaybackRecords() {
+        return (List<VideoPlayback>) videoPlaybackRepository.findAll();
+    }
 }
