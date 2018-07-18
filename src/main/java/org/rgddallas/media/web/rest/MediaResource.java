@@ -2,6 +2,7 @@ package org.rgddallas.media.web.rest;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.tomcat.jni.Local;
 import org.rgddallas.media.entity.VideoPlayback;
 import org.rgddallas.media.entity.VideoPlaybackRepository;
 import org.rgddallas.media.util.FileSearchService;
@@ -39,7 +40,7 @@ public class MediaResource {
     public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
     public static final String VIDEO_KIRTAN_LOCATION = "/volume1/video/Intranet/video_kirtan/";
     //public static final String VIDEO_KIRTAN_LOCATION = "\\\\192.168.1.144\\video\\Intranet\\video_kirtan\\";
-    //public static final String VIDEO_LOCATION = "C:\\temp\\";
+    //public static final String VIDEO_LOCATION = "\\\\192.168.1.144\\video\\Intranet\\";
     public static final String AUDIO_LOCATION = "/volume1/music/Arti/";
     //public static final String AUDIO_LOCATION = "C:\\temp\\";
 
@@ -80,7 +81,7 @@ public class MediaResource {
             videoPlayback = videoSeqList.get(0);
         }
 
-        if (LocalDateTime.now().isAfter(videoPlayback.getLastPlayed().plusDays(1))) {
+        if (LocalDateTime.now().getDayOfMonth() != videoPlayback.getLastPlayed().getDayOfMonth()) {
             sequenceToUse = videoPlayback.getFileSequence();
         } else {
             sequenceToUse = videoPlayback.getFileSequence() - 1;
@@ -119,6 +120,7 @@ public class MediaResource {
     }
 
     /**
+     * REST Endpoint to send the video kirtna file stream.
      *
      * @param output
      * @throws IOException
