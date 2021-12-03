@@ -2,21 +2,18 @@ package org.rgddallas.media.web.rest;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.tomcat.jni.Local;
 import org.rgddallas.media.entity.VideoPlayback;
 import org.rgddallas.media.entity.VideoPlaybackRepository;
 import org.rgddallas.media.util.FileSearchService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,8 +33,9 @@ public class MediaResource {
 
     public static final String MP4_EXTN = ".mp4";
     public static final String MP3_EXTN = ".mp3";
-    public static final String KIRTAN = ".mov";
-    public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    public static final String KIRTAN_EXTN = ".mov";
+    //public static final String VIDEO_LOCATION = "/volume1/video/Intranet/";
+    public static final String VIDEO_LOCATION = "C:\\temp\\";
     public static final String VIDEO_KIRTAN_LOCATION = "/volume1/video/Intranet/video_kirtan/";
     //public static final String VIDEO_KIRTAN_LOCATION = "\\\\192.168.1.144\\video\\Intranet\\video_kirtan\\";
     //public static final String VIDEO_LOCATION = "\\\\192.168.1.144\\video\\Intranet\\";
@@ -87,7 +85,6 @@ public class MediaResource {
             sequenceToUse = videoPlayback.getFileSequence() - 1;
         }
 
-        //String queryStr = "[0]*<seq>[a-zA-Z_-].*";
         String queryStr = "[0]*<seq>_.*";
         if (videoPlayback != null) {
             String seq = Long.toString(sequenceToUse);
@@ -106,12 +103,15 @@ public class MediaResource {
 
         if (file.canRead()) {
             updateSequence(videoPlayback, sequenceToUse + 1L);
+
         } else {//reset the sequence to 1 to start playing from the first video
             log.info("File not found for sequence {}, defaulting to Sequence number 1", sequenceToUse);
 
             queryStr = "[0]*<seq>_.*";
             queryStr = queryStr.replace("<seq>", "1");
             file = new File(getFileAsInputStream(VIDEO_LOCATION, queryStr, MP4_EXTN));
+
+            updateSequence(videoPlayback, 1L);
         }
 
         InputStream inputStream = new FileInputStream(file);
@@ -261,7 +261,7 @@ public class MediaResource {
         if (fileExtension == MP4_EXTN) {
             filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileToSearch, true);
 
-        } else if (fileExtension == KIRTAN) {
+        } else if (fileExtension == KIRTAN_EXTN) {
             filesFound = fileSearchService.searchDirectory(new File(fileLocation), fileLocation, true);
         }
 

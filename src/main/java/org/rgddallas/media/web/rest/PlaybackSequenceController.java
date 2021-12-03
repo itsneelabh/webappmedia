@@ -1,6 +1,5 @@
 package org.rgddallas.media.web.rest;
 
-import javafx.geometry.VPos;
 import org.apache.commons.lang.StringUtils;
 import org.rgddallas.media.entity.VideoPlayback;
 import org.rgddallas.media.entity.VideoPlaybackRepository;
